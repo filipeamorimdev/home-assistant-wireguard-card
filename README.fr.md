@@ -33,7 +33,35 @@ La carte inclut un **éditeur visuel** intégré, vous pouvez donc la configurer
 - **Connectés uniquement** — activez pour masquer les pairs hors ligne
 - **Langue** — forcez la langue de l'UI de la carte, ou laissez sur `Auto` pour suivre Home Assistant
 
-Voir [Éditeur visuel](assets/card-config.png) pour plus de détails.
+### Éditeur visuel
+
+La carte inclut un éditeur visuel, vous pouvez donc la configurer directement depuis l'UI du tableau de bord sans toucher au YAML :
+
+- **Entité du capteur** — menu déroulant pour choisir l'entité `sensor.vpn_stats`
+- **Titre de la carte** — champ de texte optionnel pour remplacer le titre de l'en-tête ; laissez vide pour utiliser la valeur par défaut localisée
+- **Connectés uniquement** — interrupteur pour masquer les pairs hors ligne de la carte
+- **Langue** — menu déroulant pour remplacer la langue de la carte ; par défaut `Auto (langue de Home Assistant)`
+| ![card configuration](assets/card-config.png)
+### Langues
+
+La carte traduit actuellement ses libellés dans les langues suivantes :
+
+| Code | Langue |
+|---|---|
+| `en` | English (langue de repli par défaut) |
+| `pt` | Português |
+| `es` | Español |
+| `fr` | Français |
+| `de` | Deutsch |
+
+Comportement :
+
+- Si `language` est défini dans la configuration de la carte et correspond à l'un des codes ci-dessus, cette langue est utilisée.
+- Sinon, la carte lit `hass.locale.language` (la langue de l'utilisateur Home Assistant). Les suffixes régionaux comme `pt-BR` ou `en-US` sont réduits à leur langue de base (`pt`, `en`).
+- Si la langue résolue n'est pas dans la liste ci-dessus, la carte se rabat sur l'anglais.
+- Le timestamp du pied est aussi formaté avec `toLocaleString(language)`, donc le format date/heure suit la langue résolue.
+
+> Les chaînes `latest_handshake`, `transfer_rx_human` et `transfer_tx_human` proviennent de l'API telles quelles. Pour les obtenir dans votre langue, il faudra les localiser dans votre service `wg-stats.py` (ou équivalent).
 
 ---
 
@@ -253,36 +281,6 @@ title: VPN Maison
 connected_only: true
 language: pt
 ```
-
-### Éditeur visuel
-
-La carte inclut un éditeur visuel, vous pouvez donc la configurer directement depuis l'UI du tableau de bord sans toucher au YAML :
-
-- **Entité du capteur** — menu déroulant pour choisir l'entité `sensor.vpn_stats`
-- **Titre de la carte** — champ de texte optionnel pour remplacer le titre de l'en-tête ; laissez vide pour utiliser la valeur par défaut localisée
-- **Connectés uniquement** — interrupteur pour masquer les pairs hors ligne de la carte
-- **Langue** — menu déroulant pour remplacer la langue de la carte ; par défaut `Auto (langue de Home Assistant)`
-
-### Langues
-
-La carte traduit actuellement ses libellés dans les langues suivantes :
-
-| Code | Langue |
-|---|---|
-| `en` | English (langue de repli par défaut) |
-| `pt` | Português |
-| `es` | Español |
-| `fr` | Français |
-| `de` | Deutsch |
-
-Comportement :
-
-- Si `language` est défini dans la configuration de la carte et correspond à l'un des codes ci-dessus, cette langue est utilisée.
-- Sinon, la carte lit `hass.locale.language` (la langue de l'utilisateur Home Assistant). Les suffixes régionaux comme `pt-BR` ou `en-US` sont réduits à leur langue de base (`pt`, `en`).
-- Si la langue résolue n'est pas dans la liste ci-dessus, la carte se rabat sur l'anglais.
-- Le timestamp du pied est aussi formaté avec `toLocaleString(language)`, donc le format date/heure suit la langue résolue.
-
-> Les chaînes `latest_handshake`, `transfer_rx_human` et `transfer_tx_human` proviennent de l'API telles quelles. Pour les obtenir dans votre langue, il faudra les localiser dans votre service `wg-stats.py` (ou équivalent).
 
 ---
 

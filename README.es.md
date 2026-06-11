@@ -33,7 +33,35 @@ La tarjeta incluye un **editor visual** integrado, así que puedes configurarla 
 - **Solo conectados** — actívalo para ocultar los peers desconectados
 - **Idioma** — fuerza el idioma de la UI de la tarjeta, o déjalo en `Automático` para seguir a Home Assistant
 
-Consulta [Editor visual](assets/card-config.png) para más detalles.
+### Editor visual
+
+La tarjeta incluye un editor visual, para que puedas configurarla directamente desde la UI del panel sin tocar YAML:
+
+- **Entidad del sensor** — menú desplegable para elegir la entidad `sensor.vpn_stats`
+- **Título de la tarjeta** — campo de texto opcional para sobrescribir el título de la cabecera; déjalo vacío para usar el valor predeterminado localizado
+- **Solo conectados** — interruptor para ocultar peers desconectados de la tarjeta
+- **Idioma** — menú desplegable para sobrescribir el idioma de la tarjeta; por defecto `Automático (idioma de Home Assistant)`
+| ![card configuration](assets/card-config.png)
+### Idiomas
+
+La tarjeta actualmente traduce sus etiquetas a los siguientes idiomas:
+
+| Código | Idioma |
+|---|---|
+| `en` | English (idioma por defecto) |
+| `pt` | Português |
+| `es` | Español |
+| `fr` | Français |
+| `de` | Deutsch |
+
+Comportamiento:
+
+- Si `language` está definido en la configuración de la tarjeta y coincide con uno de los códigos anteriores, se usa ese idioma.
+- En caso contrario, la tarjeta lee `hass.locale.language` (el idioma del usuario de Home Assistant). Los sufijos regionales como `pt-BR` o `en-US` se reducen a su idioma base (`pt`, `en`).
+- Si el idioma resuelto no está en la lista anterior, la tarjeta recurre al inglés.
+- El timestamp del pie también se formatea con `toLocaleString(language)`, por lo que el formato de fecha/hora sigue el idioma resuelto.
+
+> Las cadenas `latest_handshake`, `transfer_rx_human` y `transfer_tx_human` vienen de la API tal cual. Para obtenerlas en tu idioma, tendrás que localizarlas en tu servicio `wg-stats.py` (o equivalente).
 
 ---
 
@@ -253,36 +281,6 @@ title: VPN de Casa
 connected_only: true
 language: pt
 ```
-
-### Editor visual
-
-La tarjeta incluye un editor visual, para que puedas configurarla directamente desde la UI del panel sin tocar YAML:
-
-- **Entidad del sensor** — menú desplegable para elegir la entidad `sensor.vpn_stats`
-- **Título de la tarjeta** — campo de texto opcional para sobrescribir el título de la cabecera; déjalo vacío para usar el valor predeterminado localizado
-- **Solo conectados** — interruptor para ocultar peers desconectados de la tarjeta
-- **Idioma** — menú desplegable para sobrescribir el idioma de la tarjeta; por defecto `Automático (idioma de Home Assistant)`
-
-### Idiomas
-
-La tarjeta actualmente traduce sus etiquetas a los siguientes idiomas:
-
-| Código | Idioma |
-|---|---|
-| `en` | English (idioma por defecto) |
-| `pt` | Português |
-| `es` | Español |
-| `fr` | Français |
-| `de` | Deutsch |
-
-Comportamiento:
-
-- Si `language` está definido en la configuración de la tarjeta y coincide con uno de los códigos anteriores, se usa ese idioma.
-- En caso contrario, la tarjeta lee `hass.locale.language` (el idioma del usuario de Home Assistant). Los sufijos regionales como `pt-BR` o `en-US` se reducen a su idioma base (`pt`, `en`).
-- Si el idioma resuelto no está en la lista anterior, la tarjeta recurre al inglés.
-- El timestamp del pie también se formatea con `toLocaleString(language)`, por lo que el formato de fecha/hora sigue el idioma resuelto.
-
-> Las cadenas `latest_handshake`, `transfer_rx_human` y `transfer_tx_human` vienen de la API tal cual. Para obtenerlas en tu idioma, tendrás que localizarlas en tu servicio `wg-stats.py` (o equivalente).
 
 ---
 

@@ -33,7 +33,35 @@ Die Karte enthält einen integrierten **visuellen Editor**, sodass Sie sie direk
 - **Nur verbundene** — aktivieren, um Offline-Peers auszublenden
 - **Sprache** — erzwingen Sie die UI-Sprache der Karte, oder lassen Sie sie auf `Automatisch`, um Home Assistant zu folgen
 
-Siehe [Visueller Editor](assets/card-config.png) für Details.
+### Visueller Editor
+
+Die Karte bringt einen visuellen Editor mit, sodass Sie sie direkt über die Dashboard-UI konfigurieren können, ohne YAML anzufassen:
+
+- **Sensor-Entität** — Dropdown zur Auswahl der `sensor.vpn_stats`-Entität
+- **Kartentitel** — optionales Textfeld zum Überschreiben des Header-Titels; leer lassen, um den lokalisierten Standard zu verwenden
+- **Nur verbundene** — Schalter, um Offline-Peers aus der Karte auszublenden
+- **Sprache** — Dropdown zum Überschreiben der Kartensprache; Standard: `Automatisch (Home Assistant Sprache)`
+| ![card configuration](assets/card-config.png)
+### Sprachen
+
+Die Karte übersetzt ihre Beschriftungen derzeit in folgende Sprachen:
+
+| Code | Sprache |
+|---|---|
+| `en` | English (Standard-Fallback) |
+| `pt` | Português |
+| `es` | Español |
+| `fr` | Français |
+| `de` | Deutsch |
+
+Verhalten:
+
+- Wenn `language` in der Kartenkonfiguration gesetzt ist und einem der obigen Codes entspricht, wird diese Sprache verwendet.
+- Andernfalls liest die Karte `hass.locale.language` (die Home-Assistant-Benutzersprache). Regionssuffixe wie `pt-BR` oder `en-US` werden auf ihre Basissprache reduziert (`pt`, `en`).
+- Wenn die aufgelöste Sprache nicht in der obigen Liste ist, fällt die Karte auf Englisch zurück.
+- Der Footer-Zeitstempel wird ebenfalls mit `toLocaleString(language)` formatiert, sodass das Datums-/Zeitformat der aufgelösten Sprache folgt.
+
+> Die Strings `latest_handshake`, `transfer_rx_human` und `transfer_tx_human` kommen unverändert von der API. Um sie in Ihrer Sprache zu erhalten, müssen Sie sie in Ihrem `wg-stats.py`-Dienst (oder Äquivalent) lokalisieren.
 
 ---
 
@@ -253,36 +281,6 @@ title: Heim-VPN
 connected_only: true
 language: pt
 ```
-
-### Visueller Editor
-
-Die Karte bringt einen visuellen Editor mit, sodass Sie sie direkt über die Dashboard-UI konfigurieren können, ohne YAML anzufassen:
-
-- **Sensor-Entität** — Dropdown zur Auswahl der `sensor.vpn_stats`-Entität
-- **Kartentitel** — optionales Textfeld zum Überschreiben des Header-Titels; leer lassen, um den lokalisierten Standard zu verwenden
-- **Nur verbundene** — Schalter, um Offline-Peers aus der Karte auszublenden
-- **Sprache** — Dropdown zum Überschreiben der Kartensprache; Standard: `Automatisch (Home Assistant Sprache)`
-
-### Sprachen
-
-Die Karte übersetzt ihre Beschriftungen derzeit in folgende Sprachen:
-
-| Code | Sprache |
-|---|---|
-| `en` | English (Standard-Fallback) |
-| `pt` | Português |
-| `es` | Español |
-| `fr` | Français |
-| `de` | Deutsch |
-
-Verhalten:
-
-- Wenn `language` in der Kartenkonfiguration gesetzt ist und einem der obigen Codes entspricht, wird diese Sprache verwendet.
-- Andernfalls liest die Karte `hass.locale.language` (die Home-Assistant-Benutzersprache). Regionssuffixe wie `pt-BR` oder `en-US` werden auf ihre Basissprache reduziert (`pt`, `en`).
-- Wenn die aufgelöste Sprache nicht in der obigen Liste ist, fällt die Karte auf Englisch zurück.
-- Der Footer-Zeitstempel wird ebenfalls mit `toLocaleString(language)` formatiert, sodass das Datums-/Zeitformat der aufgelösten Sprache folgt.
-
-> Die Strings `latest_handshake`, `transfer_rx_human` und `transfer_tx_human` kommen unverändert von der API. Um sie in Ihrer Sprache zu erhalten, müssen Sie sie in Ihrem `wg-stats.py`-Dienst (oder Äquivalent) lokalisieren.
 
 ---
 

@@ -34,7 +34,35 @@ The card ships with a built-in **visual editor**, so you can set it up directly 
 - **Connected only** — toggle to hide offline peers
 - **Language** — force the card's UI language, or leave it on `Auto` to follow Home Assistant
 
-See [Visual editor](assets/card-config.png) for details.
+### Visual editor
+
+The card ships with a visual editor, so you can configure it directly from the dashboard UI without touching YAML:
+
+- **Sensor entity** — dropdown to pick the `sensor.vpn_stats` entity
+- **Card title** — optional text input to override the header title; leave empty to use the localized default
+- **Connected only** — toggle to hide offline peers from the card
+- **Language** — dropdown to override the card's language; defaults to `Auto (Home Assistant language)`
+| ![card configuration](assets/card-config.png)
+### Languages
+
+The card currently translates its labels into the following languages:
+
+| Code | Language |
+|---|---|
+| `en` | English (default fallback) |
+| `pt` | Português |
+| `es` | Español |
+| `fr` | Français |
+| `de` | Deutsch |
+
+Behaviour:
+
+- If `language` is set in the card config and matches one of the codes above, that language is used.
+- Otherwise, the card reads `hass.locale.language` (the user's Home Assistant language). Region suffixes like `pt-BR` or `en-US` are reduced to their base language (`pt`, `en`).
+- If the resolved language is not in the list above, the card falls back to English.
+- The footer timestamp is also formatted with `toLocaleString(language)`, so the date/time format follows the resolved language.
+
+> The `latest_handshake`, `transfer_rx_human`, and `transfer_tx_human` strings come from the API as-is. To get them in your language you'll need to localise them in your `wg-stats.py` (or equivalent) service.
 
 ---
 
@@ -254,36 +282,6 @@ title: Home VPN
 connected_only: true
 language: pt
 ```
-
-### Visual editor
-
-The card ships with a visual editor, so you can configure it directly from the dashboard UI without touching YAML:
-
-- **Sensor entity** — dropdown to pick the `sensor.vpn_stats` entity
-- **Card title** — optional text input to override the header title; leave empty to use the localized default
-- **Connected only** — toggle to hide offline peers from the card
-- **Language** — dropdown to override the card's language; defaults to `Auto (Home Assistant language)`
-
-### Languages
-
-The card currently translates its labels into the following languages:
-
-| Code | Language |
-|---|---|
-| `en` | English (default fallback) |
-| `pt` | Português |
-| `es` | Español |
-| `fr` | Français |
-| `de` | Deutsch |
-
-Behaviour:
-
-- If `language` is set in the card config and matches one of the codes above, that language is used.
-- Otherwise, the card reads `hass.locale.language` (the user's Home Assistant language). Region suffixes like `pt-BR` or `en-US` are reduced to their base language (`pt`, `en`).
-- If the resolved language is not in the list above, the card falls back to English.
-- The footer timestamp is also formatted with `toLocaleString(language)`, so the date/time format follows the resolved language.
-
-> The `latest_handshake`, `transfer_rx_human`, and `transfer_tx_human` strings come from the API as-is. To get them in your language you'll need to localise them in your `wg-stats.py` (or equivalent) service.
 
 ---
 

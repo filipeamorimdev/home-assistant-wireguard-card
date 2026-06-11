@@ -33,7 +33,35 @@ O cartão inclui um **editor visual** integrado, por isso pode configurá-lo dir
 - **Apenas conectados** — ative para ocultar peers desconectados
 - **Idioma** — force o idioma da UI do cartão, ou deixe em `Automático` para seguir o Home Assistant
 
-Consulte [Editor visual](assets/card-config.png) para mais detalhes.
+### Editor visual
+
+O cartão inclui um editor visual, para que possa configurá-lo diretamente pela UI do painel sem mexer no YAML:
+
+- **Entidade do sensor** — menu pendente para escolher a entidade `sensor.vpn_stats`
+- **Título do cartão** — campo de texto opcional para sobrepor o título do cabeçalho; deixe vazio para usar o valor por defeito localizado
+- **Apenas conectados** — opção para ocultar peers offline do cartão
+- **Idioma** — menu pendente para sobrepor o idioma do cartão; por defeito `Automático (idioma do Home Assistant)`
+| ![card configuration](assets/card-config.png)
+### Idiomas
+
+O cartão atualmente traduz as suas etiquetas para os seguintes idiomas:
+
+| Código | Idioma |
+|---|---|
+| `en` | English (recurso por defeito) |
+| `pt` | Português |
+| `es` | Español |
+| `fr` | Français |
+| `de` | Deutsch |
+
+Comportamento:
+
+- Se `language` estiver definido na configuração do cartão e corresponder a um dos códigos acima, esse idioma é usado.
+- Caso contrário, o cartão lê `hass.locale.language` (o idioma do utilizador do Home Assistant). Sufixos regionais como `pt-BR` ou `en-US` são reduzidos ao seu idioma base (`pt`, `en`).
+- Se o idioma resolvido não estiver na lista acima, o cartão recorre ao inglês.
+- O timestamp do rodapé também é formatado com `toLocaleString(language)`, por isso o formato da data/hora segue o idioma resolvido.
+
+> As strings `latest_handshake`, `transfer_rx_human` e `transfer_tx_human` vêm da API tal como estão. Para as obter no seu idioma terá de as localizar no seu serviço `wg-stats.py` (ou equivalente).
 
 ---
 
@@ -253,36 +281,6 @@ title: VPN de Casa
 connected_only: true
 language: pt
 ```
-
-### Editor visual
-
-O cartão inclui um editor visual, para que possa configurá-lo diretamente pela UI do painel sem mexer no YAML:
-
-- **Entidade do sensor** — menu pendente para escolher a entidade `sensor.vpn_stats`
-- **Título do cartão** — campo de texto opcional para sobrepor o título do cabeçalho; deixe vazio para usar o valor por defeito localizado
-- **Apenas conectados** — opção para ocultar peers offline do cartão
-- **Idioma** — menu pendente para sobrepor o idioma do cartão; por defeito `Automático (idioma do Home Assistant)`
-
-### Idiomas
-
-O cartão atualmente traduz as suas etiquetas para os seguintes idiomas:
-
-| Código | Idioma |
-|---|---|
-| `en` | English (recurso por defeito) |
-| `pt` | Português |
-| `es` | Español |
-| `fr` | Français |
-| `de` | Deutsch |
-
-Comportamento:
-
-- Se `language` estiver definido na configuração do cartão e corresponder a um dos códigos acima, esse idioma é usado.
-- Caso contrário, o cartão lê `hass.locale.language` (o idioma do utilizador do Home Assistant). Sufixos regionais como `pt-BR` ou `en-US` são reduzidos ao seu idioma base (`pt`, `en`).
-- Se o idioma resolvido não estiver na lista acima, o cartão recorre ao inglês.
-- O timestamp do rodapé também é formatado com `toLocaleString(language)`, por isso o formato da data/hora segue o idioma resolvido.
-
-> As strings `latest_handshake`, `transfer_rx_human` e `transfer_tx_human` vêm da API tal como estão. Para as obter no seu idioma terá de as localizar no seu serviço `wg-stats.py` (ou equivalente).
 
 ---
 
