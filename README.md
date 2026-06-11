@@ -14,7 +14,10 @@ A clean, minimal Lovelace card for [Home Assistant](https://www.home-assistant.i
 | Online peer | Offline peer |
 |---|---|
 | Green dot · `online` badge · handshake in seconds | Grey dot · `offline` badge · handshake in hours |
-| ![WireGuard Card connected](assets/card-connected.png) | ![WireGuard Card no connections](assets/card-connected-no-active-connections.png) |
+
+
+![WireGuard Card connected](assets/card-connected.png)
+![WireGuard Card no connections](assets/card-connected-no-active-connections.png)
 
 Each peer card shows:
 - **Connection status** — colour-coded dot and badge
@@ -42,7 +45,11 @@ The card ships with a visual editor, so you can configure it directly from the d
 - **Card title** — optional text input to override the header title; leave empty to use the localized default
 - **Connected only** — toggle to hide offline peers from the card
 - **Language** — dropdown to override the card's language; defaults to `Auto (Home Assistant language)`
-| ![card configuration](assets/card-config.png)
+
+
+![card configuration](assets/card-config.png)
+
+
 ### Languages
 
 The card currently translates its labels into the following languages:
