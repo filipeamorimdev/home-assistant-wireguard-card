@@ -1,4 +1,4 @@
-# WireGuard Card
+# Home Assistant WireGuard Card
 
 **English** · [Português](README.pt.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -14,6 +14,9 @@ A clean, minimal Lovelace card for [Home Assistant](https://www.home-assistant.i
 | Online peer | Offline peer |
 |---|---|
 | Green dot · `online` badge · handshake in seconds | Grey dot · `offline` badge · handshake in hours |
+![WireGuard Card connected](assets/card-connected.png)
+
+![WireGuard Card no connections](assets/card-connected-no-active-connections.png)
 
 Each peer card shows:
 - **Connection status** — colour-coded dot and badge

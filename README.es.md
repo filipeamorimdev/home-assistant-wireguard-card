@@ -1,4 +1,4 @@
-# Tarjeta WireGuard
+# Home Assistant Tarjeta WireGuard
 
 [English](README.md) · [Português](README.pt.md) · **Español** · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -8,7 +8,7 @@ Una tarjeta Lovelace limpia y minimalista para [Home Assistant](https://www.home
 
 ## Vista previa
 
-![WireGuard Card](assets/card.png)
+![WireGuard Card](assets/card_es.png)
 
 
 | Peer en línea | Peer desconectado |
