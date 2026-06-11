@@ -19,8 +19,21 @@ Cada cartão de peer mostra:
 - **Estado da ligação** — ponto e selo com código de cor
 - **Endpoint** — IP pública e porta
 - **IPs permitidos** — o endereço de túnel do peer
-- **Último handshake** — em formato legível, destacado a verde quando recente
+- **Último handshake** — em formato legível, destacado a verde quando o peer está online
 - **Estatísticas de transferência** — rx / tx em unidades legíveis
+
+---
+
+## Sem YAML necessário
+
+O cartão inclui um **editor visual** integrado, por isso pode configurá-lo diretamente na UI do painel — sem editar YAML. No editor pode alterar:
+
+- **Entidade do sensor** — escolha a entidade `sensor.vpn_stats` que alimenta o cartão
+- **Título do cartão** — substitua o título do cabeçalho, ou deixe vazio para usar o padrão localizado
+- **Apenas conectados** — ative para ocultar peers desconectados
+- **Idioma** — force o idioma da UI do cartão, ou deixe em `Automático` para seguir o Home Assistant
+
+Consulte [Editor visual](assets/card-config.png) para mais detalhes.
 
 ---
 

@@ -19,8 +19,21 @@ Jede Peer-Karte zeigt:
 - **Verbindungsstatus** — farbcodierter Punkt und Plakette
 - **Endpunkt** — öffentliche IP und Port
 - **Erlaubte IPs** — Tunneladresse des Peers
-- **Letzter Handshake** — in lesbarer Form, grün hervorgehoben wenn aktuell
+- **Letzter Handshake** — in lesbarer Form, grün hervorgehoben wenn der Peer online ist
 - **Übertragungsstatistiken** — rx / tx in lesbaren Einheiten
+
+---
+
+## Kein YAML erforderlich
+
+Die Karte enthält einen integrierten **visuellen Editor**, sodass Sie sie direkt über die Dashboard-UI konfigurieren können — ohne YAML zu bearbeiten. Im Editor können Sie Folgendes ändern:
+
+- **Sensor-Entität** — wählen Sie die Entität `sensor.vpn_stats`, die die Karte speist
+- **Kartentitel** — überschreiben Sie den Titel der Kopfzeile, oder lassen Sie ihn leer für den lokalisierten Standard
+- **Nur verbundene** — aktivieren, um Offline-Peers auszublenden
+- **Sprache** — erzwingen Sie die UI-Sprache der Karte, oder lassen Sie sie auf `Automatisch`, um Home Assistant zu folgen
+
+Siehe [Visueller Editor](assets/card-config.png) für Details.
 
 ---
 

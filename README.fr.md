@@ -19,8 +19,21 @@ Chaque carte de pair affiche :
 - **État de connexion** — point et badge avec code couleur
 - **Endpoint** — IP publique et port
 - **IPs autorisées** — l'adresse du tunnel du pair
-- **Dernier handshake** — au format lisible, surligné en vert lorsqu'il est récent
+- **Dernier handshake** — au format lisible, surligné en vert lorsque le pair est en ligne
 - **Statistiques de transfert** — rx / tx en unités lisibles
+
+---
+
+## Aucun YAML requis
+
+La carte inclut un **éditeur visuel** intégré, vous pouvez donc la configurer directement depuis l'UI du tableau de bord — sans toucher au YAML. Depuis l'éditeur, vous pouvez modifier :
+
+- **Entité du capteur** — choisissez l'entité `sensor.vpn_stats` qui alimente la carte
+- **Titre de la carte** — remplacez le titre de l'en-tête, ou laissez vide pour utiliser la valeur par défaut localisée
+- **Connectés uniquement** — activez pour masquer les pairs hors ligne
+- **Langue** — forcez la langue de l'UI de la carte, ou laissez sur `Auto` pour suivre Home Assistant
+
+Voir [Éditeur visuel](assets/card-config.png) pour plus de détails.
 
 ---
 
