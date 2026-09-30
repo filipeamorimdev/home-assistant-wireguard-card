@@ -1,0 +1,11 @@
+[Unit]
+Description=WireGuard Stats JSON endpoint
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/wg-stats.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target

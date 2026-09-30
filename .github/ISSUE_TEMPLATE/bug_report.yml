@@ -1,0 +1,39 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2025.1.0"
+    validations:
+      required: true
+  - type: input
+    id: card_version
+    attributes:
+      label: Card version
+      placeholder: "v1.0.0"
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead? Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Card configuration (YAML)
+      render: yaml
+  - type: textarea
+    id: sensor
+    attributes:
+      label: Sensor attributes
+      description: Paste the attributes from Developer Tools → States. Remove public IPs and peer names you don't want to share.
+      render: json
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console errors
+      render: text
