@@ -1,12 +1,16 @@
+const WG_CARD_VERSION = '1.1.0';
+
 const WG_TRANSLATIONS = {
   en: {
     entity_not_found: 'Entity not found',
+    api_error: 'API error',
     status_online: 'online',
     status_offline: 'offline',
     meta_endpoint: 'endpoint',
     meta_allowed_ips: 'allowed IPs',
     meta_last_handshake: 'last handshake',
     meta_never: 'never',
+    meta_online_for: 'online for',
     transfer_rx: 'rx',
     transfer_tx: 'tx',
     title: 'WireGuard VPN',
@@ -24,12 +28,14 @@ const WG_TRANSLATIONS = {
   },
   pt: {
     entity_not_found: 'Entidade não encontrada',
+    api_error: 'Erro da API',
     status_online: 'online',
     status_offline: 'offline',
     meta_endpoint: 'endpoint',
     meta_allowed_ips: 'IPs permitidos',
     meta_last_handshake: 'último handshake',
     meta_never: 'nunca',
+    meta_online_for: 'online há',
     transfer_rx: 'rx',
     transfer_tx: 'tx',
     title: 'WireGuard VPN',
@@ -47,12 +53,14 @@ const WG_TRANSLATIONS = {
   },
   es: {
     entity_not_found: 'Entidad no encontrada',
+    api_error: 'Error de la API',
     status_online: 'en línea',
     status_offline: 'desconectado',
     meta_endpoint: 'endpoint',
     meta_allowed_ips: 'IPs permitidas',
     meta_last_handshake: 'último handshake',
     meta_never: 'nunca',
+    meta_online_for: 'en línea desde hace',
     transfer_rx: 'rx',
     transfer_tx: 'tx',
     title: 'WireGuard VPN',
@@ -70,12 +78,14 @@ const WG_TRANSLATIONS = {
   },
   fr: {
     entity_not_found: 'Entité introuvable',
+    api_error: "Erreur de l'API",
     status_online: 'en ligne',
     status_offline: 'hors ligne',
     meta_endpoint: 'endpoint',
     meta_allowed_ips: 'IPs autorisées',
     meta_last_handshake: 'dernier handshake',
     meta_never: 'jamais',
+    meta_online_for: 'en ligne depuis',
     transfer_rx: 'rx',
     transfer_tx: 'tx',
     title: 'WireGuard VPN',
@@ -93,12 +103,14 @@ const WG_TRANSLATIONS = {
   },
   de: {
     entity_not_found: 'Entität nicht gefunden',
+    api_error: 'API-Fehler',
     status_online: 'online',
     status_offline: 'offline',
     meta_endpoint: 'Endpunkt',
     meta_allowed_ips: 'Erlaubte IPs',
     meta_last_handshake: 'Letzter Handshake',
     meta_never: 'nie',
+    meta_online_for: 'Online seit',
     transfer_rx: 'rx',
     transfer_tx: 'tx',
     title: 'WireGuard VPN',
@@ -151,6 +163,56 @@ function wgEscapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+const WG_BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+
+// Binary units like `wg show`, with the number formatted for the language
+// (e.g. "1.50 GiB" in English, "1,50 GiB" in Portuguese).
+function wgFormatBytes(bytes, lang, digits = 2) {
+  let value = Number(bytes);
+  let unit = 0;
+  while (Math.abs(value) >= 1024 && unit < WG_BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  const fraction = unit === 0 ? 0 : digits;
+  const number = new Intl.NumberFormat(lang, {
+    minimumFractionDigits: fraction,
+    maximumFractionDigits: fraction,
+  }).format(value);
+  return `${number} ${WG_BYTE_UNITS[unit]}`;
+}
+
+// "now", "12 seconds ago", "5 minutes ago"… in the card's language.
+function wgRelativeTime(seconds, lang) {
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+  if (seconds < 60) return rtf.format(-seconds, 'second');
+  if (seconds < 3600) return rtf.format(-Math.floor(seconds / 60), 'minute');
+  if (seconds < 86400) return rtf.format(-Math.floor(seconds / 3600), 'hour');
+  if (seconds < 365 * 86400) return rtf.format(-Math.floor(seconds / 86400), 'day');
+  return rtf.format(-Math.floor(seconds / (365 * 86400)), 'year');
+}
+
+// Two largest units, e.g. "1 hr 5 min", "45 sec".
+function wgDuration(seconds, lang) {
+  const units = [['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1]];
+  const parts = [];
+  for (const [unit, size] of units) {
+    const value = Math.floor(seconds / size);
+    seconds -= value * size;
+    if (value || (unit === 'second' && !parts.length)) {
+      parts.push(new Intl.NumberFormat(lang, { style: 'unit', unit, unitDisplay: 'short' }).format(value));
+    }
+    if (parts.length === 2) break;
+  }
+  return parts.join(' ');
+}
+
+// Epoch milliseconds from an ISO timestamp, or null when missing/invalid.
+function wgParseTime(value) {
+  const ms = value ? Date.parse(value) : NaN;
+  return Number.isFinite(ms) ? ms : null;
+}
+
 class WireguardCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
@@ -173,7 +235,8 @@ class WireguardCard extends HTMLElement {
       return;
     }
     const attrs = entity.attributes;
-    const peers = attrs.peers || {};
+    // Guard against a malformed attribute (string/array) from a misconfigured API.
+    const peers = attrs.peers && typeof attrs.peers === 'object' && !Array.isArray(attrs.peers) ? attrs.peers : {};
     // Fall back to the sensor state only when it is numeric — otherwise
     // an unavailable sensor would render "unavailable / 0".
     const stateCount = Number.isFinite(Number(entity.state)) ? entity.state : '—';
@@ -182,10 +245,32 @@ class WireguardCard extends HTMLElement {
     const updatedAt = attrs.updated_at ? new Date(attrs.updated_at).toLocaleString(lang) : '';
 
     const connectedOnly = this._config.connected_only === true;
-    const visiblePeers = Object.values(peers).filter(p => !connectedOnly || p.connected);
+    const visiblePeers = Object.values(peers)
+      .filter(p => p && typeof p === 'object')
+      .filter(p => !connectedOnly || p.connected === true);
+
+    // Prefer raw values (formatted here, in the card's language) and fall back
+    // to the API's preformatted text for older or custom servers.
+    const bytesText = (bytes, text) =>
+      typeof bytes === 'number' ? wgFormatBytes(bytes, lang) : (text ?? '');
+    const rateText = (rate, online) =>
+      online && typeof rate === 'number'
+        ? `<span class="wg-tx-rate">${wgEscapeHtml(wgFormatBytes(rate, lang, 1))}/s</span>`
+        : '';
 
     const peerRows = visiblePeers.map(p => {
-      const online = p.connected;
+      const online = p.connected === true;
+      // Times are filled in (and kept ticking) by _tick().
+      const handshakeAt = wgParseTime(p.latest_handshake_at);
+      const handshake = handshakeAt !== null
+        ? `<span class="wg-meta-val wg-meta-val--${online ? 'good' : 'muted'}" data-wg-ago="${handshakeAt}"></span>`
+        : `<span class="wg-meta-val wg-meta-val--${online ? 'good' : 'muted'}">${wgEscapeHtml(p.latest_handshake ?? wgT(lang, 'meta_never'))}</span>`;
+      const since = online ? wgParseTime(p.connected_since) : null;
+      const onlineFor = since !== null ? `
+            <div class="wg-meta-item">
+              <span class="wg-meta-label">${wgT(lang, 'meta_online_for')}</span>
+              <span class="wg-meta-val" data-wg-since="${since}"></span>
+            </div>` : '';
       return `
         <div class="wg-peer ${online ? 'wg-peer--online' : 'wg-peer--offline'}">
           <div class="wg-peer-header">
@@ -204,19 +289,21 @@ class WireguardCard extends HTMLElement {
             </div>
             <div class="wg-meta-item">
               <span class="wg-meta-label">${wgT(lang, 'meta_last_handshake')}</span>
-              <span class="wg-meta-val wg-meta-val--${online ? 'good' : 'muted'}">${wgEscapeHtml(p.latest_handshake ?? wgT(lang, 'meta_never'))}</span>
-            </div>
+              ${handshake}
+            </div>${onlineFor}
           </div>
           <div class="wg-transfer">
             <div class="wg-transfer-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
               <span class="wg-tx-label">${wgT(lang, 'transfer_rx')}</span>
-              <span class="wg-tx-val">${wgEscapeHtml(p.transfer_rx_human ?? '')}</span>
+              <span class="wg-tx-val">${wgEscapeHtml(bytesText(p.transfer_rx_bytes, p.transfer_rx_human))}</span>
+              ${rateText(p.rx_rate, online)}
             </div>
             <div class="wg-transfer-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
               <span class="wg-tx-label">${wgT(lang, 'transfer_tx')}</span>
-              <span class="wg-tx-val">${wgEscapeHtml(p.transfer_tx_human ?? '')}</span>
+              <span class="wg-tx-val">${wgEscapeHtml(bytesText(p.transfer_tx_bytes, p.transfer_tx_human))}</span>
+              ${rateText(p.tx_rate, online)}
             </div>
           </div>
         </div>`;
@@ -255,6 +342,8 @@ class WireguardCard extends HTMLElement {
           .wg-transfer-item { display: flex; align-items: center; gap: 5px; color: var(--secondary-text-color); }
           .wg-tx-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--secondary-text-color); }
           .wg-tx-val { font-size: 12px; font-weight: 500; color: var(--primary-text-color); }
+          .wg-tx-rate { font-size: 11px; color: var(--secondary-text-color); }
+          .wg-error { font-size: 12px; color: var(--error-color, #db4437); background: var(--secondary-background-color); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; word-break: break-word; }
           .wg-updated { font-size: 10px; color: var(--secondary-text-color); text-align: right; margin-top: 10px; }
         </style>
         <div class="wg-root">
@@ -269,10 +358,39 @@ class WireguardCard extends HTMLElement {
               <p class="wg-stat-val">${wgEscapeHtml(activePeers)} <span>/ ${wgEscapeHtml(totalPeers)}</span></p>
             </div>
           </div>
+          ${attrs.error ? `<div class="wg-error">${wgT(lang, 'api_error')}: ${wgEscapeHtml(attrs.error)}</div>` : ''}
           <div class="wg-peers">${peerRows}</div>
           ${updatedAt ? `<div class="wg-updated">${wgT(lang, 'updated')} ${updatedAt}</div>` : ''}
         </div>
       </ha-card>`;
+    this._tick();
+  }
+
+  // Keep "x seconds ago" / "online for" current between sensor updates by
+  // rewriting only those text nodes, not the whole card.
+  connectedCallback() {
+    if (!this._ticker) this._ticker = setInterval(() => this._tick(), 1000);
+  }
+
+  disconnectedCallback() {
+    clearInterval(this._ticker);
+    this._ticker = null;
+  }
+
+  _tick() {
+    const lang = this._lastLang;
+    if (!lang || document.hidden) return;
+    const now = Date.now();
+    // Clamp at 0 in case the browser's clock is slightly behind the server's.
+    const elapsed = el => Math.max(0, Math.floor((now - Number(el.dataset.wgAgo ?? el.dataset.wgSince)) / 1000));
+    this.querySelectorAll('[data-wg-ago]').forEach(el => {
+      const text = wgRelativeTime(elapsed(el), lang);
+      if (el.textContent !== text) el.textContent = text;
+    });
+    this.querySelectorAll('[data-wg-since]').forEach(el => {
+      const text = wgDuration(elapsed(el), lang);
+      if (el.textContent !== text) el.textContent = text;
+    });
   }
 
   setConfig(config) {
@@ -538,5 +656,12 @@ if (!customElements.get('wireguard-card')) {
     name: 'WireGuard Card',
     description: 'Displays WireGuard VPN peer status from a REST sensor.',
     preview: false,
+    documentationURL: 'https://github.com/filipeamorimdev/home-assistant-wireguard-card',
   });
+
+  console.info(
+    `%c WIREGUARD-CARD %c v${WG_CARD_VERSION} `,
+    'color: #fff; background: #88171a; font-weight: 700;',
+    'color: #88171a; background: #fff; font-weight: 700;',
+  );
 }

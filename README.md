@@ -3,6 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/filipeamorimdev/home-assistant-wireguard-card)](https://github.com/filipeamorimdev/home-assistant-wireguard-card/releases/latest)
 [![License](https://img.shields.io/github/license/filipeamorimdev/home-assistant-wireguard-card)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/filipeamorimdev/home-assistant-wireguard-card?style=flat)](https://github.com/filipeamorimdev/home-assistant-wireguard-card/stargazers)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Lovelace%20card-41BDF5)](https://www.home-assistant.io/)
 
 **English** · [Português](README.pt.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
@@ -72,7 +73,7 @@ Behaviour:
 - If the resolved language is not in the list above, the card falls back to English.
 - The footer timestamp is also formatted with `toLocaleString(language)`, so the date/time format follows the resolved language.
 
-> The `latest_handshake`, `transfer_rx_human`, and `transfer_tx_human` strings come from the API as-is. To get them in your language you'll need to localise them in your `wg-stats.py` (or equivalent) service.
+> Handshake times and transfer sizes are formatted by the card in the resolved language (e.g. `vor 5 Minuten`, `1,50 GiB`) when the API sends the raw `latest_handshake_at` and `transfer_*_bytes` fields, as the included `wg-stats.py` does. If your API only sends the `latest_handshake` / `transfer_*_human` text, that text is shown as-is.
 
 ---
 
@@ -86,6 +87,16 @@ Behaviour:
 ---
 
 ## Installation
+
+### HACS (recommended)
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=filipeamorimdev&repository=home-assistant-wireguard-card&category=plugin)
+
+1. Click the button above, or in HACS open **⋮ → Custom repositories** and add `https://github.com/filipeamorimdev/home-assistant-wireguard-card` with type **Dashboard**
+2. Search for **WireGuard Card** in HACS and click **Download**
+3. HACS adds the dashboard resource for you — hard-refresh your browser (`Ctrl+Shift+R`)
+
+### Manual
 
 1. Download `wireguard-card.js` from the [latest release](../../releases/latest)
 2. Copy it to `/config/www/wireguard-card.js`
@@ -110,9 +121,15 @@ This card reads from a REST sensor that polls a JSON endpoint. The endpoint must
       "endpoint": "1.2.3.4:51820",
       "allowed_ips": "10.0.0.2/32",
       "latest_handshake": "21 seconds",
+      "latest_handshake_at": "2026-05-20T22:54:39+00:00",
+      "transfer_rx_bytes": 3365929,
+      "transfer_tx_bytes": 143843655,
       "transfer_rx_human": "3.21 MiB",
       "transfer_tx_human": "137.18 MiB",
-      "connected": true
+      "rx_rate": 1520,
+      "tx_rate": 48211,
+      "connected": true,
+      "connected_since": "2026-05-20T21:10:02+00:00"
     }
   },
   "updated_at": "2026-05-20T22:55:00.281068+00:00"
@@ -127,6 +144,7 @@ This card reads from a REST sensor that polls a JSON endpoint. The endpoint must
 | `active_peers` | — | Shown in the header stat. Falls back to the sensor's state value if omitted |
 | `total_peers` | — | Shown next to `active_peers`. Falls back to the number of entries in `peers` if omitted |
 | `updated_at` | — | ISO timestamp shown in the footer. The footer is hidden if omitted |
+| `error` | — | Shown as an error banner when present. The included script sets it when `wg` fails |
 
 ### Per-peer fields
 
@@ -135,12 +153,17 @@ This card reads from a REST sensor that polls a JSON endpoint. The endpoint must
 | `friendly_name` | ✅ | Displayed as the peer's title |
 | `endpoint` | ✅ | Displayed as-is (e.g. `1.2.3.4:51820`) |
 | `allowed_ips` | ✅ | Displayed as-is (e.g. `10.0.0.2/32`) |
-| `latest_handshake` | ✅ | Displayed as-is, so format it however you prefer on the API side |
-| `transfer_rx_human` | ✅ | Displayed as-is (e.g. `3.21 MiB`) |
-| `transfer_tx_human` | ✅ | Displayed as-is (e.g. `137.18 MiB`) |
 | `connected` | ✅ | Boolean. Drives the online/offline indicator and the `connected_only` filter |
+| `latest_handshake_at` | — | ISO timestamp of the last handshake. Shown as "x seconds ago" in the card's language, updating every second |
+| `latest_handshake` | — | Text shown as-is when `latest_handshake_at` is missing. If neither is set, the card shows "never" |
+| `transfer_rx_bytes` / `transfer_tx_bytes` | — | Byte counters, formatted by the card (e.g. `1.50 GiB`) |
+| `transfer_rx_human` / `transfer_tx_human` | — | Text shown as-is when the byte counters are missing |
+| `rx_rate` / `tx_rate` | — | Current throughput in bytes per second, shown next to the totals of online peers |
+| `connected_since` | — | ISO timestamp of when the current session started. Shown as "online for" on online peers |
 
-Any extra fields your API returns (raw byte counters, seconds-ago integers, public keys, etc.) are simply ignored by the card.
+The included script also returns `latest_handshake_seconds_ago`, `public_key`, `persistent_keepalive`, `preshared_key` (whether the peer uses one), and a top-level `interface` object with the listen port, public key, total bytes and total throughput. The card ignores these, but you can use them in templates (add `interface` to `json_attributes` to get it). Any other extra fields are ignored too.
+
+`rx_rate`, `tx_rate` and `connected_since` are measured between polls, so they are `null` until the script has seen the peer at least twice. `connected_since` stays `null` for sessions that were already up when the script started.
 
 
 ## Setting up the WireGuard Stats API Service
@@ -211,7 +234,8 @@ You should see that the service is active (running).
 If so, your API endpoint is now up and ready to be used by Home Assistant.
 
 > ⚠️ **Security note:** The sample `wg-stats.py` listens on `0.0.0.0:8888` with **no authentication and no TLS**, so any host on the same network can read your WireGuard topology — peer names, endpoints, allowed IPs, and transfer stats. Before exposing it, consider one or more of the following:
-> - Bind to a specific interface (e.g. change the listen address from `0.0.0.0` to `127.0.0.1` or your LAN-only IP) so it isn't reachable from untrusted networks.
+> - Set `WG_STATS_LISTEN` (e.g. in `/etc/default/wg-stats`) to bind to a specific address instead of `0.0.0.0` — your LAN-only IP, or `127.0.0.1` if Home Assistant runs on the same host.
+> - Set `WG_STATS_TOKEN` to require an `Authorization: Bearer <token>` header — e.g. `WG_STATS_TOKEN=<long random string>` in `/etc/default/wg-stats` (`chmod 600`), then `sudo systemctl restart wg-stats` — and add the matching `headers` to the REST sensor (see below).
 > - Restrict access with a firewall rule allowing only your Home Assistant host.
 > - Never expose port `8888` directly to the internet. If remote access is needed, put it behind a reverse proxy with authentication/TLS, or reach it over the VPN itself.
 
@@ -228,6 +252,9 @@ sensor:
     unique_id: wireguard_vpn_stats
     resource: http://<your-api-host>:<port>
     scan_interval: 10
+    # Only if WG_STATS_TOKEN is set on the API host:
+    # headers:
+    #   Authorization: !secret wg_stats_auth   # "Bearer <token>" in secrets.yaml
     value_template: "{{ value_json.active_peers }}"
     unit_of_measurement: peers
     json_attributes:
@@ -235,6 +262,7 @@ sensor:
       - total_peers
       - peers
       - updated_at
+      - error
 ```
 
 Replace `<your-api-host>:<port>` with the address of your WireGuard API.
@@ -249,6 +277,21 @@ Replace `<your-api-host>:<port>` with the address of your WireGuard API.
 
 After editing `configuration.yaml`, reload your HA configuration (**Developer Tools → YAML → Reload all YAML**) or restart Home Assistant.
 
+### Keep the database small
+
+The `peers` attribute changes on every poll (handshake times, transfer rates, `updated_at`), so Home Assistant's recorder saves a new copy of it every `scan_interval`: about 8,600 copies a day at 10 seconds. Home Assistant also stops recording attributes larger than 16 KB, which this sensor reaches at roughly 25 peers.
+
+The card only needs the current state, so exclude the sensor from the recorder:
+
+```yaml
+recorder:
+  exclude:
+    entities:
+      - sensor.vpn_stats
+```
+
+This also removes the history graph of the active peer count. If you want to keep it, add a template sensor with `state: "{{ states('sensor.vpn_stats') }}"`. It records only the number, not the attributes.
+
 ---
 
 ## Card configuration
@@ -260,7 +303,7 @@ type: custom:wireguard-card
 entity: sensor.vpn_stats
 ```
 
-When adding the card from the dashboard picker, the first `sensor.*` entity whose ID contains `vpn` is pre-selected — usually `sensor.vpn_stats` — so you can often confirm without changing anything.
+When adding the card from the dashboard picker, the first `sensor.*` entity that exposes a `peers` attribute is pre-selected (falling back to one whose ID contains `vpn`) — usually `sensor.vpn_stats` — so you can often confirm without changing anything.
 
 ### Options
 
@@ -296,6 +339,9 @@ language: pt
 
 **Card not appearing in the card picker**
 → Make sure the resource was added correctly and you've done a hard refresh (`Ctrl+Shift+R`).
+
+**Card shows "API error"**
+→ The `wg-stats` service couldn't read WireGuard's status. Check `sudo journalctl -u wg-stats` for details (wrong `WG_STATS_INTERFACE`, `wg` not installed, etc.).
 
 ---
 

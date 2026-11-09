@@ -1,11 +1,45 @@
 [Unit]
 Description=WireGuard Stats JSON endpoint
-After=network.target
+# Start after the tunnel is up (change wg0 if you use another interface).
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/bin/python3 /usr/local/bin/wg-stats.py
 Restart=always
+# Without a delay, a failing bind (e.g. the listen IP isn't up yet) uses up
+# systemd's start limit within a second and the unit stays failed.
+RestartSec=5
+# Root is needed to run `wg show` and to read /etc/wireguard/wg0.conf
+# (which also holds the private key), so the sandboxing below limits
+# what the process can do instead.
 User=root
+
+# Optional settings (WG_STATS_LISTEN, WG_STATS_PORT, WG_STATS_TOKEN,
+# WG_STATS_INTERFACE). Keep the token out of this file; put it in
+# /etc/default/wg-stats with mode 600.
+EnvironmentFile=-/etc/default/wg-stats
+
+# Hardening
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_NET_ADMIN
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK AF_UNIX
+# Using userspace wireguard-go instead of the kernel module? Uncomment:
+# ReadWritePaths=/run/wireguard
 
 [Install]
 WantedBy=multi-user.target
