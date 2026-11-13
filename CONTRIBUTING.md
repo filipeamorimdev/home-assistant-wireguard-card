@@ -19,3 +19,9 @@ Please use the bug report template and include your Home Assistant version, the 
 ## Code changes
 
 For anything beyond a small fix, please open an issue first so we can agree on the approach.
+
+## Releasing
+
+1. Bump `WG_CARD_VERSION` in `wireguard-card.js` and `DEFAULT_REF` in `src/install.sh` to the new tag (e.g. `v1.2.0`).
+2. Push and wait for the **Validate** workflow (HACS + ShellCheck) to pass.
+3. Create a full GitHub release (not just a tag) and attach `wireguard-card.js` **and** `src/install.sh`. The README's installer link points at `releases/latest/download/install.sh`.

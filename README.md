@@ -51,6 +51,7 @@ The card ships with a built-in **visual editor**, so you can set it up directly 
 - **Card title** — override the header title, or leave it empty for the localized default
 - **Connected only** — toggle to hide offline peers
 - **Language** — force the card's UI language, or leave it on `Auto` to follow Home Assistant
+- **Set up the stats API** — generate an access key and get a ready-to-copy install command for your WireGuard server
 
 ![card configuration](assets/card-config.png)
 
@@ -170,7 +171,64 @@ The included script also returns `latest_handshake_seconds_ago`, `public_key`, `
 
 Follow these steps to set up a simple JSON API for WireGuard status that integrates with Home Assistant.
 
-### 1. Create the API Script
+### Quick install (recommended)
+
+The [`install.sh`](src/install.sh) script does all the manual steps below for you on any Linux with systemd (Debian, Ubuntu, Raspberry Pi OS, Fedora, Arch…). It:
+
+- checks for `python3` (3.7+) and `wg`, and detects your WireGuard interface
+- installs `wg-stats.py` and the systemd service, then starts it and checks that it answers
+- listens on your LAN IP by default and generates an access token, saved in `/etc/default/wg-stats` (readable by root only)
+- prints the Home Assistant sensor configuration to paste, with your address and token filled in
+
+Download it, read it, then run it on the WireGuard server:
+
+```bash
+curl -fsSLO https://github.com/filipeamorimdev/home-assistant-wireguard-card/releases/latest/download/install.sh
+less install.sh
+sudo bash install.sh
+```
+
+Or in one line:
+
+```bash
+curl -fsSL https://github.com/filipeamorimdev/home-assistant-wireguard-card/releases/latest/download/install.sh | sudo bash
+```
+
+| Command | What it does |
+|---|---|
+| `sudo bash install.sh` | Install, or change the settings of an existing install (your current values are the defaults) |
+| `sudo bash install.sh upgrade` | Update the script and service to the downloaded release, keeping your settings and token |
+| `sudo bash install.sh --new-token` | Replace the access token (update `secrets.yaml` afterwards) |
+| `sudo bash install.sh --token KEY` | Use an access key you already have, such as one generated in the card's editor |
+| `sudo bash install.sh uninstall` | Stop and remove the service. Add `--purge` to also delete the settings and token |
+
+Run `bash install.sh --help` for all options, e.g. `--interface wg1 --listen 192.168.1.10 --port 8888 --yes` for an unattended install.
+
+### Guided setup from Home Assistant
+
+Prefer to start from Home Assistant? The card's editor can create the access key and give you the install command with it filled in. The key is made in your browser and never saved in the card's configuration.
+
+1. **Add the card.** Install the card ([HACS](#hacs-recommended) or [manual](#manual)), open a dashboard, click **Edit dashboard → Add card** and pick **WireGuard Card**. A preview error is expected for now, because the sensor doesn't exist yet.
+2. **Generate a key.** At the bottom of the card editor, expand **Set up the stats API** and click **Generate access key**. Keep the editor open until you've copied both lines below. If you close it, just generate a new key.
+3. **Install on the WireGuard server.** Copy the install command, open a terminal on the machine running WireGuard (e.g. over SSH) and paste it. The installer asks a few questions: press Enter to accept the defaults (choose `127.0.0.1` as the address only if Home Assistant runs on that same machine). When it finishes, it checks that the API answers and prints a sensor configuration. Keep that output open.
+4. **Save the key in Home Assistant.** Copy the second line from the card editor (`wg_stats_auth: "Bearer …"`) and add it to `secrets.yaml` in your Home Assistant config folder (with the File editor or Studio Code Server add-on, for example).
+5. **Add the sensor.** Paste the `sensor:` block the installer printed into `configuration.yaml`. If you already have a `sensor:` section, add only the lines from `- platform: rest` downwards under it. You can skip the `secrets.yaml` line it prints: you added it in step 4.
+6. **Restart Home Assistant.** Go to **Settings → System → Restart** (or **Developer Tools → YAML → Check configuration** first, to catch typos).
+7. **Pick the sensor.** Edit the card again, choose **sensor.vpn_stats** under **Sensor entity** and click **Save**. Your peers appear within `scan_interval` seconds (10 by default).
+
+Optional: [keep the database small](#keep-the-database-small) by excluding the sensor from the recorder.
+
+Not working? Check the API from the Home Assistant machine, replacing the address and key with yours. A `401` means the key in `secrets.yaml` doesn't match the one on the server; run the install command again with the key from `secrets.yaml`, or generate a new key and update both.
+
+```bash
+curl -H "Authorization: Bearer <key>" http://<wireguard-server-ip>:8888
+```
+
+### Manual install
+
+Prefer to set it up by hand? Follow these steps.
+
+#### 1. Create the API Script
 
 Create the API script using your preferred editor:
 
@@ -181,13 +239,13 @@ sudo nano /usr/local/bin/wg-stats.py
 You can find a sample script at [`src/wg-stats.py`](src/wg-stats.py).  
 Modify it as needed for your environment.
 
-### 2. Make the Script Executable
+#### 2. Make the Script Executable
 
 ```bash
 sudo chmod +x /usr/local/bin/wg-stats.py
 ```
 
-### 3. Create a systemd Service
+#### 3. Create a systemd Service
 
 Set up a service to run your script automatically:
 
@@ -198,7 +256,7 @@ sudo nano /etc/systemd/system/wg-stats.service
 Example [`wg-stats.service`](src/wg-stats.service) available in this repository for reference.  
 Be sure to update `ExecStart` if your Python path is different.
 
-### 4. Reload systemd
+#### 4. Reload systemd
 
 Reload systemd so it detects the new service:
 
@@ -206,7 +264,7 @@ Reload systemd so it detects the new service:
 sudo systemctl daemon-reload
 ```
 
-### 5. Enable the Service at Boot
+#### 5. Enable the Service at Boot
 
 Enable the service so that it runs on startup:
 
@@ -214,7 +272,7 @@ Enable the service so that it runs on startup:
 sudo systemctl enable wg-stats
 ```
 
-### 6. Start the Service
+#### 6. Start the Service
 
 Start the WireGuard stats service immediately:
 
@@ -222,7 +280,7 @@ Start the WireGuard stats service immediately:
 sudo systemctl start wg-stats
 ```
 
-### 7. Check That Everything Is Working
+#### 7. Check That Everything Is Working
 
 Verify the service status:
 
@@ -238,10 +296,14 @@ If so, your API endpoint is now up and ready to be used by Home Assistant.
 > - Set `WG_STATS_TOKEN` to require an `Authorization: Bearer <token>` header — e.g. `WG_STATS_TOKEN=<long random string>` in `/etc/default/wg-stats` (`chmod 600`), then `sudo systemctl restart wg-stats` — and add the matching `headers` to the REST sensor (see below).
 > - Restrict access with a firewall rule allowing only your Home Assistant host.
 > - Never expose port `8888` directly to the internet. If remote access is needed, put it behind a reverse proxy with authentication/TLS, or reach it over the VPN itself.
+>
+> The quick installer applies the first two for you.
 
 ---
 
 ## Sensor configuration
+
+> Used the quick installer? It already printed this block with your address and token — paste that instead.
 
 Add the following to your `configuration.yaml`:
 

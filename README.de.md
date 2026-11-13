@@ -32,6 +32,7 @@ Die Karte enthält einen integrierten **visuellen Editor**, sodass Sie sie direk
 - **Kartentitel** — überschreiben Sie den Titel der Kopfzeile, oder lassen Sie ihn leer für den lokalisierten Standard
 - **Nur verbundene** — aktivieren, um Offline-Peers auszublenden
 - **Sprache** — erzwingen Sie die UI-Sprache der Karte, oder lassen Sie sie auf `Automatisch`, um Home Assistant zu folgen
+- **Statistik-API einrichten** — erzeugen Sie einen Zugriffsschlüssel und erhalten Sie einen kopierfertigen Installationsbefehl für Ihren WireGuard-Server
 
 ### Visueller Editor
 
@@ -158,7 +159,64 @@ Das mitgelieferte Skript liefert außerdem `latest_handshake_seconds_ago`, `publ
 
 Folgen Sie diesen Schritten, um eine einfache JSON-API für den WireGuard-Status einzurichten, die sich mit Home Assistant integriert.
 
-### 1. API-Skript erstellen
+### Schnellinstallation (empfohlen)
+
+Das Skript [`install.sh`](src/install.sh) erledigt alle manuellen Schritte unten für Sie, auf jedem Linux mit systemd (Debian, Ubuntu, Raspberry Pi OS, Fedora, Arch…). Es:
+
+- prüft, ob `python3` (3.7+) und `wg` vorhanden sind, und erkennt Ihre WireGuard-Schnittstelle
+- installiert `wg-stats.py` und den systemd-Dienst, startet ihn und prüft, ob er antwortet
+- lauscht standardmäßig auf Ihrer LAN-IP und erzeugt ein Zugriffstoken, gespeichert in `/etc/default/wg-stats` (nur für root lesbar)
+- gibt die Home-Assistant-Sensorkonfiguration zum Einfügen aus, mit Ihrer Adresse und Ihrem Token
+
+Laden Sie es herunter, lesen Sie es und führen Sie es auf dem WireGuard-Server aus:
+
+```bash
+curl -fsSLO https://github.com/filipeamorimdev/home-assistant-wireguard-card/releases/latest/download/install.sh
+less install.sh
+sudo bash install.sh
+```
+
+Oder in einer Zeile:
+
+```bash
+curl -fsSL https://github.com/filipeamorimdev/home-assistant-wireguard-card/releases/latest/download/install.sh | sudo bash
+```
+
+| Befehl | Was er tut |
+|---|---|
+| `sudo bash install.sh` | Installiert, oder ändert die Einstellungen einer bestehenden Installation (die aktuellen Werte sind die Vorgaben) |
+| `sudo bash install.sh upgrade` | Aktualisiert Skript und Dienst auf das heruntergeladene Release, Einstellungen und Token bleiben erhalten |
+| `sudo bash install.sh --new-token` | Ersetzt das Zugriffstoken (danach `secrets.yaml` anpassen) |
+| `sudo bash install.sh --token SCHLÜSSEL` | Verwendet einen vorhandenen Zugriffsschlüssel, z. B. den im Karteneditor erzeugten |
+| `sudo bash install.sh uninstall` | Stoppt und entfernt den Dienst. Mit `--purge` werden auch Einstellungen und Token gelöscht |
+
+Mit `bash install.sh --help` sehen Sie alle Optionen, z. B. `--interface wg1 --listen 192.168.1.10 --port 8888 --yes` für eine Installation ohne Rückfragen.
+
+### Geführte Einrichtung aus Home Assistant
+
+Sie möchten lieber in Home Assistant beginnen? Der Karteneditor erstellt den Zugriffsschlüssel und gibt Ihnen den Installationsbefehl mit bereits eingesetztem Schlüssel. Der Schlüssel wird in Ihrem Browser erzeugt und nie in der Kartenkonfiguration gespeichert.
+
+1. **Karte hinzufügen.** Installieren Sie die Karte ([HACS](#hacs-empfohlen) oder [manuell](#manuell)), öffnen Sie ein Dashboard, klicken Sie auf **Dashboard bearbeiten → Karte hinzufügen** und wählen Sie **WireGuard Card**. Ein Fehler in der Vorschau ist vorerst normal, da der Sensor noch nicht existiert.
+2. **Schlüssel erzeugen.** Klappen Sie unten im Karteneditor **Statistik-API einrichten** auf und klicken Sie auf **Zugriffsschlüssel erzeugen**. Lassen Sie den Editor geöffnet, bis Sie beide Zeilen unten kopiert haben. Wenn Sie ihn schließen, erzeugen Sie einfach einen neuen Schlüssel.
+3. **Auf dem WireGuard-Server installieren.** Kopieren Sie den Installationsbefehl, öffnen Sie ein Terminal auf dem Rechner, auf dem WireGuard läuft (z. B. per SSH), und fügen Sie ihn ein. Der Installer stellt ein paar Fragen: Drücken Sie Enter, um die Standardwerte zu übernehmen (wählen Sie `127.0.0.1` als Adresse nur, wenn Home Assistant auf demselben Rechner läuft). Am Ende prüft er, ob die API antwortet, und gibt eine Sensor-Konfiguration aus. Lassen Sie diese Ausgabe geöffnet.
+4. **Schlüssel in Home Assistant speichern.** Kopieren Sie die zweite Zeile aus dem Karteneditor (`wg_stats_auth: "Bearer …"`) und fügen Sie sie in die `secrets.yaml` im Konfigurationsordner von Home Assistant ein (z. B. mit dem Add-on File editor oder Studio Code Server).
+5. **Sensor hinzufügen.** Fügen Sie den vom Installer ausgegebenen `sensor:`-Block in die `configuration.yaml` ein. Wenn Sie bereits einen `sensor:`-Abschnitt haben, fügen Sie darunter nur die Zeilen ab `- platform: rest` ein. Die vom Installer ausgegebene `secrets.yaml`-Zeile können Sie ignorieren: Sie haben sie in Schritt 4 eingetragen.
+6. **Home Assistant neu starten.** Gehen Sie zu **Einstellungen → System → Neu starten** (oder zuerst zu **Entwicklerwerkzeuge → YAML → Konfiguration prüfen**, um Tippfehler zu finden).
+7. **Sensor auswählen.** Bearbeiten Sie die Karte erneut, wählen Sie unter **Sensor-Entität** **sensor.vpn_stats** und klicken Sie auf **Speichern**. Ihre Peers erscheinen innerhalb von `scan_interval` Sekunden (standardmäßig 10).
+
+Optional: [Halten Sie die Datenbank klein](#datenbank-klein-halten), indem Sie den Sensor vom Recorder ausschließen.
+
+Funktioniert es nicht? Testen Sie die API vom Home-Assistant-Rechner aus und ersetzen Sie Adresse und Schlüssel durch Ihre eigenen. Ein `401` bedeutet, dass der Schlüssel in der `secrets.yaml` nicht mit dem auf dem Server übereinstimmt: Führen Sie den Installationsbefehl mit dem Schlüssel aus der `secrets.yaml` erneut aus, oder erzeugen Sie einen neuen Schlüssel und aktualisieren Sie beide Stellen.
+
+```bash
+curl -H "Authorization: Bearer <schlüssel>" http://<ip-des-wireguard-servers>:8888
+```
+
+### Manuelle Installation
+
+Lieber alles von Hand einrichten? Folgen Sie diesen Schritten.
+
+#### 1. API-Skript erstellen
 
 Erstellen Sie das API-Skript mit Ihrem bevorzugten Editor:
 
@@ -169,13 +227,13 @@ sudo nano /usr/local/bin/wg-stats.py
 Ein Beispielskript finden Sie unter [`src/wg-stats.py`](src/wg-stats.py).  
 Passen Sie es bei Bedarf an Ihre Umgebung an.
 
-### 2. Skript ausführbar machen
+#### 2. Skript ausführbar machen
 
 ```bash
 sudo chmod +x /usr/local/bin/wg-stats.py
 ```
 
-### 3. systemd-Dienst erstellen
+#### 3. systemd-Dienst erstellen
 
 Richten Sie einen Dienst ein, der Ihr Skript automatisch ausführt:
 
@@ -186,7 +244,7 @@ sudo nano /etc/systemd/system/wg-stats.service
 Eine Beispiel-[`wg-stats.service`](src/wg-stats.service) ist in diesem Repository als Referenz verfügbar.  
 Achten Sie darauf, `ExecStart` zu aktualisieren, falls Ihr Python-Pfad anders ist.
 
-### 4. systemd neu laden
+#### 4. systemd neu laden
 
 Laden Sie systemd neu, damit es den neuen Dienst erkennt:
 
@@ -194,7 +252,7 @@ Laden Sie systemd neu, damit es den neuen Dienst erkennt:
 sudo systemctl daemon-reload
 ```
 
-### 5. Dienst beim Start aktivieren
+#### 5. Dienst beim Start aktivieren
 
 Aktivieren Sie den Dienst, sodass er beim Systemstart läuft:
 
@@ -202,7 +260,7 @@ Aktivieren Sie den Dienst, sodass er beim Systemstart läuft:
 sudo systemctl enable wg-stats
 ```
 
-### 6. Dienst starten
+#### 6. Dienst starten
 
 Starten Sie den WireGuard-Statistikdienst sofort:
 
@@ -210,7 +268,7 @@ Starten Sie den WireGuard-Statistikdienst sofort:
 sudo systemctl start wg-stats
 ```
 
-### 7. Überprüfen, dass alles funktioniert
+#### 7. Überprüfen, dass alles funktioniert
 
 Prüfen Sie den Dienststatus:
 
@@ -226,10 +284,14 @@ Wenn ja, ist Ihr API-Endpunkt jetzt bereit, von Home Assistant verwendet zu werd
 > - Setzen Sie `WG_STATS_TOKEN`, um einen `Authorization: Bearer <token>`-Header zu verlangen — z. B. `WG_STATS_TOKEN=<lange Zufallszeichenkette>` in `/etc/default/wg-stats` (`chmod 600`), danach `sudo systemctl restart wg-stats` — und ergänzen Sie die passenden `headers` im REST-Sensor (siehe unten).
 > - Beschränken Sie den Zugriff mit einer Firewall-Regel, die nur Ihren Home-Assistant-Host zulässt.
 > - Geben Sie Port `8888` niemals direkt ins Internet frei. Falls Fernzugriff nötig ist, stellen Sie ihn hinter einen Reverse-Proxy mit Authentifizierung/TLS oder greifen Sie über das VPN selbst darauf zu.
+>
+> Die Schnellinstallation setzt die ersten beiden Punkte für Sie um.
 
 ---
 
 ## Sensor-Konfiguration
+
+> Schnellinstallation verwendet? Sie hat diesen Block bereits mit Ihrer Adresse und Ihrem Token ausgegeben — fügen Sie den ein.
 
 Fügen Sie Folgendes zu Ihrer `configuration.yaml` hinzu:
 

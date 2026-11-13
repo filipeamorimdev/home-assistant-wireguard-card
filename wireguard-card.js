@@ -25,6 +25,16 @@ const WG_TRANSLATIONS = {
     editor_connected_only_hint: 'Hide offline peers from the card',
     editor_language: 'Language',
     editor_language_auto: 'Auto (Home Assistant language)',
+    editor_setup_title: 'Set up the stats API',
+    editor_setup_intro: 'Create an access key here, then install wg-stats on your WireGuard server with it.',
+    editor_setup_generate: 'Generate access key',
+    editor_setup_regenerate: 'Generate a new key',
+    editor_setup_step_install: '1. Run on the WireGuard server:',
+    editor_setup_step_secret: "2. Add to Home Assistant's secrets.yaml:",
+    editor_setup_step_sensor: '3. Paste the sensor configuration the installer prints into configuration.yaml and restart Home Assistant.',
+    editor_setup_copy: 'Copy',
+    editor_setup_copied: 'Copied',
+    editor_setup_not_saved: "The key isn't saved in the card. Keep it only in secrets.yaml.",
   },
   pt: {
     entity_not_found: 'Entidade não encontrada',
@@ -50,6 +60,16 @@ const WG_TRANSLATIONS = {
     editor_connected_only_hint: 'Ocultar peers desconectados do cartão',
     editor_language: 'Idioma',
     editor_language_auto: 'Automático (idioma do Home Assistant)',
+    editor_setup_title: 'Configurar a API de estatísticas',
+    editor_setup_intro: 'Crie aqui uma chave de acesso e instale o wg-stats com ela no servidor WireGuard.',
+    editor_setup_generate: 'Gerar chave de acesso',
+    editor_setup_regenerate: 'Gerar nova chave',
+    editor_setup_step_install: '1. Execute no servidor WireGuard:',
+    editor_setup_step_secret: '2. Adicione ao secrets.yaml do Home Assistant:',
+    editor_setup_step_sensor: '3. Cole no configuration.yaml a configuração do sensor que o instalador mostra e reinicie o Home Assistant.',
+    editor_setup_copy: 'Copiar',
+    editor_setup_copied: 'Copiado',
+    editor_setup_not_saved: 'A chave não fica guardada no cartão. Guarde-a apenas no secrets.yaml.',
   },
   es: {
     entity_not_found: 'Entidad no encontrada',
@@ -75,6 +95,16 @@ const WG_TRANSLATIONS = {
     editor_connected_only_hint: 'Ocultar los peers desconectados de la tarjeta',
     editor_language: 'Idioma',
     editor_language_auto: 'Automático (idioma de Home Assistant)',
+    editor_setup_title: 'Configurar la API de estadísticas',
+    editor_setup_intro: 'Crea aquí una clave de acceso e instala wg-stats con ella en tu servidor WireGuard.',
+    editor_setup_generate: 'Generar clave de acceso',
+    editor_setup_regenerate: 'Generar una clave nueva',
+    editor_setup_step_install: '1. Ejecuta en el servidor WireGuard:',
+    editor_setup_step_secret: '2. Añade a secrets.yaml de Home Assistant:',
+    editor_setup_step_sensor: '3. Pega en configuration.yaml la configuración del sensor que muestra el instalador y reinicia Home Assistant.',
+    editor_setup_copy: 'Copiar',
+    editor_setup_copied: 'Copiado',
+    editor_setup_not_saved: 'La clave no se guarda en la tarjeta. Guárdala solo en secrets.yaml.',
   },
   fr: {
     entity_not_found: 'Entité introuvable',
@@ -100,6 +130,16 @@ const WG_TRANSLATIONS = {
     editor_connected_only_hint: 'Masquer les pairs hors ligne de la carte',
     editor_language: 'Langue',
     editor_language_auto: 'Auto (langue de Home Assistant)',
+    editor_setup_title: "Configurer l'API de statistiques",
+    editor_setup_intro: "Créez ici une clé d'accès, puis installez wg-stats avec cette clé sur votre serveur WireGuard.",
+    editor_setup_generate: "Générer une clé d'accès",
+    editor_setup_regenerate: 'Générer une nouvelle clé',
+    editor_setup_step_install: '1. Exécutez sur le serveur WireGuard :',
+    editor_setup_step_secret: '2. Ajoutez au secrets.yaml de Home Assistant :',
+    editor_setup_step_sensor: "3. Collez dans configuration.yaml la configuration du capteur affichée par l'installateur, puis redémarrez Home Assistant.",
+    editor_setup_copy: 'Copier',
+    editor_setup_copied: 'Copié',
+    editor_setup_not_saved: "La clé n'est pas enregistrée dans la carte. Conservez-la uniquement dans secrets.yaml.",
   },
   de: {
     entity_not_found: 'Entität nicht gefunden',
@@ -125,6 +165,16 @@ const WG_TRANSLATIONS = {
     editor_connected_only_hint: 'Offline-Peers ausblenden',
     editor_language: 'Sprache',
     editor_language_auto: 'Automatisch (Home Assistant Sprache)',
+    editor_setup_title: 'Statistik-API einrichten',
+    editor_setup_intro: 'Erstellen Sie hier einen Zugriffsschlüssel und installieren Sie damit wg-stats auf Ihrem WireGuard-Server.',
+    editor_setup_generate: 'Zugriffsschlüssel erzeugen',
+    editor_setup_regenerate: 'Neuen Schlüssel erzeugen',
+    editor_setup_step_install: '1. Auf dem WireGuard-Server ausführen:',
+    editor_setup_step_secret: '2. In die secrets.yaml von Home Assistant eintragen:',
+    editor_setup_step_sensor: '3. Die vom Installer ausgegebene Sensor-Konfiguration in die configuration.yaml einfügen und Home Assistant neu starten.',
+    editor_setup_copy: 'Kopieren',
+    editor_setup_copied: 'Kopiert',
+    editor_setup_not_saved: 'Der Schlüssel wird nicht in der Karte gespeichert. Bewahren Sie ihn nur in der secrets.yaml auf.',
   },
 };
 
@@ -152,6 +202,18 @@ function wgT(lang, key) {
     WG_TRANSLATIONS.en[key] ||
     key;
 }
+
+// Random access key for the stats API: 32 bytes, base64url, the same shape
+// as Python's secrets.token_urlsafe(32). getRandomValues also works on
+// plain-HTTP Home Assistant installs, unlike crypto.randomUUID.
+function wgGenerateToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+const WG_REPO_URL = 'https://github.com/filipeamorimdev/home-assistant-wireguard-card';
 
 // Escape user/API-derived values before interpolating them into innerHTML.
 // Safe for both element-text and double-quoted-attribute contexts.
@@ -526,6 +588,35 @@ class WireguardCardEditor extends HTMLElement {
         }
         .wg-switch input:checked + .wg-slider { background: var(--primary-color, #3b82f6); }
         .wg-switch input:checked + .wg-slider::before { transform: translateX(16px); }
+        .wg-setup { border-top: 1px solid var(--divider-color); padding-top: 12px; }
+        .wg-setup summary { cursor: pointer; font-size: 13px; color: var(--primary-text-color); }
+        .wg-setup-body { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--secondary-text-color); }
+        .wg-setup-body p { margin: 0; }
+        .wg-code-row { display: flex; gap: 6px; align-items: stretch; }
+        .wg-code {
+          flex: 1; min-width: 0; margin: 0;
+          padding: 8px 10px;
+          background: var(--secondary-background-color);
+          color: var(--primary-text-color);
+          border-radius: 6px;
+          font-family: var(--code-font-family, monospace);
+          font-size: 11px;
+          white-space: pre-wrap; word-break: break-all;
+          user-select: all;
+        }
+        .wg-button {
+          background: var(--primary-color, #3b82f6);
+          color: var(--text-primary-color, #fff);
+          border: none; border-radius: 6px;
+          padding: 6px 12px;
+          font-size: 12px; cursor: pointer;
+          align-self: flex-start;
+        }
+        .wg-button.secondary {
+          background: transparent;
+          color: var(--primary-color, #3b82f6);
+          border: 1px solid var(--divider-color);
+        }
       </style>
       <div class="wg-editor">
         <div>
@@ -557,10 +648,18 @@ class WireguardCardEditor extends HTMLElement {
             ${languageOptions}
           </select>
         </div>
+        <details class="wg-setup" ${this._setupOpen ? 'open' : ''}>
+          <summary>${wgT(lang, 'editor_setup_title')}</summary>
+          <div class="wg-setup-body">${this._setupBody(lang)}</div>
+        </details>
       </div>`;
 
     this._built = true;
     this._renderedLang = lang;
+
+    const setup = this.querySelector('.wg-setup');
+    setup.addEventListener('toggle', () => { this._setupOpen = setup.open; });
+    this._bindSetup(lang);
 
     this.querySelector('#entity-picker').addEventListener('change', e => {
       this._config = { ...this._config, entity: e.target.value };
@@ -615,6 +714,64 @@ class WireguardCardEditor extends HTMLElement {
         composed: true,
       }));
     });
+  }
+
+  // The generated key lives only on this editor instance, so it survives the
+  // re-render on a language change but is never written to the card config,
+  // which every dashboard user can read.
+  _setupBody(lang) {
+    const t = key => wgT(lang, key);
+    if (!this._setupToken) {
+      return `
+        <p>${t('editor_setup_intro')}</p>
+        <button type="button" class="wg-button" id="wg-generate">${t('editor_setup_generate')}</button>`;
+    }
+    const installUrl = `${WG_REPO_URL}/releases/download/v${WG_CARD_VERSION}/install.sh`;
+    const command = `curl -fsSL ${installUrl} | sudo bash -s -- --token ${this._setupToken}`;
+    const secret = `wg_stats_auth: "Bearer ${this._setupToken}"`;
+    const row = (id, text) => `
+      <div class="wg-code-row">
+        <pre class="wg-code" id="${id}">${wgEscapeHtml(text)}</pre>
+        <button type="button" class="wg-button secondary" data-copy="${id}">${t('editor_setup_copy')}</button>
+      </div>`;
+    return `
+      <p>${t('editor_setup_step_install')}</p>
+      ${row('wg-install-cmd', command)}
+      <p>${t('editor_setup_step_secret')}</p>
+      ${row('wg-secret-line', secret)}
+      <p>${t('editor_setup_step_sensor')}</p>
+      <p>${t('editor_setup_not_saved')}</p>
+      <button type="button" class="wg-button secondary" id="wg-generate">${t('editor_setup_regenerate')}</button>`;
+  }
+
+  _bindSetup(lang) {
+    const body = this.querySelector('.wg-setup-body');
+    body.querySelector('#wg-generate').addEventListener('click', () => {
+      this._setupToken = wgGenerateToken();
+      body.innerHTML = this._setupBody(lang);
+      this._bindSetup(lang);
+    });
+    body.querySelectorAll('[data-copy]').forEach(button => {
+      button.addEventListener('click', () => this._copy(button, lang));
+    });
+  }
+
+  async _copy(button, lang) {
+    const source = this.querySelector(`#${button.dataset.copy}`);
+    const text = source.textContent;
+    try {
+      // The Clipboard API needs HTTPS; plain-HTTP installs fall back to
+      // selecting the text so the user can press Ctrl/Cmd+C.
+      await navigator.clipboard.writeText(text);
+      button.textContent = wgT(lang, 'editor_setup_copied');
+      setTimeout(() => { button.textContent = wgT(lang, 'editor_setup_copy'); }, 1500);
+    } catch (e) {
+      const range = document.createRange();
+      range.selectNodeContents(source);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
   }
 
   _syncValues() {
